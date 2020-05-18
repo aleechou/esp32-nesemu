@@ -1,3 +1,10 @@
+
+将屏幕驱动芯片由 ILI9341(240x320) 改为 ST7789(240x240)
+
+
+原项目内容：
+
+
 ESP32-NESEMU, a Nintendo Entertainment System emulator for the ESP32
 ====================================================================
 

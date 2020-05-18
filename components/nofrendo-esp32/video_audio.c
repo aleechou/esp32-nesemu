@@ -37,15 +37,31 @@
 #include <stdint.h>
 #include "driver/i2s.h"
 #include "sdkconfig.h"
-#include <spi_lcd.h>
+// #include <spi_lcd.h>
 
 #include <psxcontroller.h>
+
 
 #define  DEFAULT_SAMPLERATE   22100
 #define  DEFAULT_FRAGSIZE     128
 
-#define  DEFAULT_WIDTH        256
+#define  DEFAULT_WIDTH        240
 #define  DEFAULT_HEIGHT       NES_VISIBLE_HEIGHT
+
+
+#include "st7789.h"
+#define CONFIG_MOSI_GPIO 17
+#define CONFIG_SCLK_GPIO 18
+#define CONFIG_CS_GPIO 26
+#define CONFIG_DC_GPIO 5
+#define CONFIG_RESET_GPIO 19
+#define CONFIG_BL_GPIO 25
+#define CONFIG_WIDTH 240
+#define CONFIG_HEIGHT 240
+#define CONFIG_OFFSETX 0
+#define CONFIG_OFFSETY 0
+
+TFT_t lcd;
 
 
 TimerHandle_t timer;
@@ -197,7 +213,8 @@ static int set_mode(int width, int height)
    return 0;
 }
 
-uint16 myPalette[256];
+// uint16 myPalette[256] ;
+rgb_t myPalette[256] ;
 
 /* copy nes palette over to hardware */
 static void set_palette(rgb_t *pal)
@@ -208,9 +225,13 @@ static void set_palette(rgb_t *pal)
 
    for (i = 0; i < 256; i++)
    {
-      c=(pal[i].b>>3)+((pal[i].g>>2)<<5)+((pal[i].r>>3)<<11);
+    //   c=(pal[i].b>>3)+((pal[i].g>>2)<<5)+((pal[i].r>>3)<<11);
       //myPalette[i]=(c>>8)|((c&0xff)<<8);
-      myPalette[i]=c;
+    //   myPalette[i]=c;
+	
+		myPalette[i].b = pal[i].b ;
+		myPalette[i].g = pal[i].g ;
+		myPalette[i].r = pal[i].r ;
    }
 
 }
@@ -244,16 +265,50 @@ static void custom_blit(bitmap_t *bmp, int num_dirties, rect_t *dirty_rects) {
 }
 
 
+uint16_t line[256] ;
+void st7789_write_frame(const uint8_t ** data) {
+
+    int x, y;
+	int height = 240 ;
+	int width = 240 ;
+	int idx ;
+	// uint16_t color ;
+	
+    for (y=0; y<height; y++) {
+        
+		for(x=0;x<width;x++) {
+			idx = data[y][x] ;
+			line[x] = rgb565_conv(myPalette[idx].r, myPalette[idx].g, myPalette[idx].b) ;
+			
+			
+			// lcdDrawPixel(&lcd, x, y, color) ;
+		}
+
+		lcdDrawMultiPixels(&lcd, 0, y, width, line) ;
+    }
+
+}
+
+
 //This runs on core 1.
 static void videoTask(void *arg) {
+
+
+	
+	printf("init lcd\n");
+
 	int x, y;
 	bitmap_t *bmp=NULL;
-	x = (320-DEFAULT_WIDTH)/2;
-    y = ((240-DEFAULT_HEIGHT)/2);
+	// x = (240-DEFAULT_WIDTH)/2;
+    // y = ((240-DEFAULT_HEIGHT)/2);
     while(1) {
 //		xQueueReceive(vidQueue, &bmp, portMAX_DELAY);//skip one frame to drop to 30
 		xQueueReceive(vidQueue, &bmp, portMAX_DELAY);
-		ili9341_write_frame(x, y, DEFAULT_WIDTH, DEFAULT_HEIGHT, (const uint8_t **)bmp->line);
+
+		// printf("F:%dx%d\n",bmp->width, bmp->height) ;
+
+		// ili9341_write_frame(x, y, DEFAULT_WIDTH, DEFAULT_HEIGHT, (const uint8_t **)bmp->line);
+		st7789_write_frame(bmp->line);
 	}
 }
 
@@ -325,8 +380,19 @@ int osd_init()
 	if (osd_init_sound())
 		return -1;
 
-	ili9341_init();
-	ili9341_write_frame(0,0,320,240,NULL);
+	// ili9341_init();
+	// ili9341_write_frame(0,0,320,240,NULL);
+	
+	spi_master_init(&lcd, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
+	lcdInit(&lcd, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
+
+	// 清屏
+	lcdDrawFillRect(&lcd, 0, 0, 239, 239, rgb565_conv(0, 0, 0));
+
+	
+	lcdDrawFillRect(&lcd, 50, 50, 239, 239, rgb565_conv(0, 20, 20));
+
+
 	vidQueue=xQueueCreate(1, sizeof(bitmap_t *));
 	xTaskCreatePinnedToCore(&videoTask, "videoTask", 2048, NULL, 5, NULL, 1);
 	osd_initinput();

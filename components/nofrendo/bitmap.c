@@ -80,6 +80,8 @@ bitmap_t *bmp_create(int width, int height, int overdraw)
    uint8 *addr;
    int pitch;
 
+	printf("malloc %dx%d +%d\n", width, height, overdraw);
+
    pitch = width + (overdraw * 2); /* left and right */
    addr = malloc((pitch * height) + 3); /* add max 32-bit aligned adjustment */
    if (NULL == addr)
