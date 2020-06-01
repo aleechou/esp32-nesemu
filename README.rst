@@ -5,18 +5,30 @@
 Pin    GPIO
 =====  =======================
 MISO   none
+    
+DC     16
 MOSI   17
 CLK    18
-CS     26
-DC     5
 RST    19
-BCKL   none
+BCKL   23
+CS     26
 =====  =======================
 
+编译 (WSL):
+
+```
+. /mnt/d/lib/esp-idf/export.sh
+make
+```
+
+
+烧录：
+```
+python D:\lib\esp-idf\components\esptool_py\esptool\esptool.py  --chip esp32 --port COM4 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 build/bootloader/bootloader.bin 0x10000 build/nesemu.bin 0x8000  build/partitions.bin 0x00100000 .\rom\emocheng.nes
+```
 
 
 原项目内容：
-
 
 ESP32-NESEMU, a Nintendo Entertainment System emulator for the ESP32
 ====================================================================

@@ -45,17 +45,19 @@
 #define  DEFAULT_SAMPLERATE   22100
 #define  DEFAULT_FRAGSIZE     128
 
-#define  DEFAULT_WIDTH        240
+#define  DEFAULT_WIDTH        200
 #define  DEFAULT_HEIGHT       NES_VISIBLE_HEIGHT
 
 
 #include "st7789.h"
-#define CONFIG_MOSI_GPIO 17
-#define CONFIG_SCLK_GPIO 18
-#define CONFIG_CS_GPIO 26
+
 #define CONFIG_DC_GPIO 5
-#define CONFIG_RESET_GPIO 19
-#define CONFIG_BL_GPIO 25
+#define CONFIG_MOSI_GPIO 17
+#define CONFIG_RESET_GPIO 18
+#define CONFIG_SCLK_GPIO 19
+#define CONFIG_BL_GPIO 23
+#define CONFIG_CS_GPIO 26
+
 #define CONFIG_WIDTH 240
 #define CONFIG_HEIGHT 240
 #define CONFIG_OFFSETX 0
@@ -272,16 +274,13 @@ void st7789_write_frame(const uint8_t ** data) {
 	int height = 240 ;
 	int width = 240 ;
 	int idx ;
-	// uint16_t color ;
-	
+
     for (y=0; y<height; y++) {
         
 		for(x=0;x<width;x++) {
 			idx = data[y][x] ;
 			line[x] = rgb565_conv(myPalette[idx].r, myPalette[idx].g, myPalette[idx].b) ;
-			
-			
-			// lcdDrawPixel(&lcd, x, y, color) ;
+			// lcdDrawPixel(&lcd, x, y, line[x]) ;
 		}
 
 		lcdDrawMultiPixels(&lcd, 0, y, width, line) ;
@@ -292,17 +291,14 @@ void st7789_write_frame(const uint8_t ** data) {
 
 //This runs on core 1.
 static void videoTask(void *arg) {
-
-
-	
+		
 	printf("init lcd\n");
 
-	int x, y;
 	bitmap_t *bmp=NULL;
 	// x = (240-DEFAULT_WIDTH)/2;
     // y = ((240-DEFAULT_HEIGHT)/2);
     while(1) {
-//		xQueueReceive(vidQueue, &bmp, portMAX_DELAY);//skip one frame to drop to 30
+		// xQueueReceive(vidQueue, &bmp, portMAX_DELAY);//skip one frame to drop to 30
 		xQueueReceive(vidQueue, &bmp, portMAX_DELAY);
 
 		// printf("F:%dx%d\n",bmp->width, bmp->height) ;
@@ -385,12 +381,8 @@ int osd_init()
 	
 	spi_master_init(&lcd, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
 	lcdInit(&lcd, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
-
 	// 清屏
 	lcdDrawFillRect(&lcd, 0, 0, 239, 239, rgb565_conv(0, 0, 0));
-
-	
-	lcdDrawFillRect(&lcd, 50, 50, 239, 239, rgb565_conv(0, 20, 20));
 
 
 	vidQueue=xQueueCreate(1, sizeof(bitmap_t *));
